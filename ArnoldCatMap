@@ -1,0 +1,106 @@
+package com.mycompany.arnoldcatmap;
+
+import java.awt.*;
+import java.awt.image.*;
+import javax.swing.*;
+import java.io.*;
+import javax.imageio.ImageIO;
+
+
+public class ArnoldCatMap {
+
+    public static void main(String[] args) {
+        try {
+            // Cargar la imagen desde resources
+            File file = new File("src/main/resources/imagen.jpg");
+            BufferedImage image = ImageIO.read(file);
+
+            // Forzar a imagen cuadrada (recorte mínimo)
+            int size = Math.min(image.getWidth(), image.getHeight());
+            BufferedImage squareImage = image.getSubimage(0, 0, size, size);
+
+            // Convertir a escala de grises
+            BufferedImage grayImage = toGrayscale(squareImage);
+
+            // Parámetros del Arnold Cat Map clásico
+            int a = 1, b = 1, c = 1, d = 2;
+            int numIterations = 100;
+
+            // Crear ventana una vez
+            JFrame frame = new JFrame("Arnold Cat Map");
+            JLabel label = new JLabel(new ImageIcon(grayImage));
+            frame.setDefaultCloseOperation(JFrame.EXIT_ON_CLOSE);
+            frame.getContentPane().add(label);
+            frame.pack();
+            frame.setVisible(true);
+
+            BufferedImage originalCopy = deepCopy(grayImage);
+            BufferedImage currentImage = grayImage;
+
+            for (int iter = 1; iter <= numIterations; iter++) {
+                currentImage = applyArnoldCatMap(currentImage, a, b, c, d);
+                label.setIcon(new ImageIcon(currentImage));
+                frame.repaint();
+
+                // Pausa visual
+                Thread.sleep(100);
+
+                // Verificar si volvió a la original
+                if (imagesEqual(currentImage, originalCopy)) {
+                    System.out.println("Imagen restaurada en la iteración " + iter);
+                    break;
+                }
+            }
+
+        } catch (IOException e) {
+            System.out.println("Error al cargar la imagen.");
+            e.printStackTrace();
+        } catch (InterruptedException e) {
+            e.printStackTrace();
+        }
+    }
+
+    public static BufferedImage toGrayscale(BufferedImage image) {
+        BufferedImage grayImage = new BufferedImage(image.getWidth(), image.getHeight(), BufferedImage.TYPE_BYTE_GRAY);
+        Graphics g = grayImage.getGraphics();
+        g.drawImage(image, 0, 0, null);
+        g.dispose();
+        return grayImage;
+    }
+
+    public static BufferedImage applyArnoldCatMap(BufferedImage image, int a, int b, int c, int d) {
+        int size = image.getWidth();  // Cuadrada
+        BufferedImage result = new BufferedImage(size, size, BufferedImage.TYPE_BYTE_GRAY);
+
+        for (int x = 0; x < size; x++) {
+            for (int y = 0; y < size; y++) {
+                int newX = (a * x + b * y) % size;
+                int newY = (c * x + d * y) % size;
+                int rgb = image.getRGB(x, y);
+                result.setRGB(newX, newY, rgb);
+            }
+        }
+        return result;
+    }
+
+    public static boolean imagesEqual(BufferedImage img1, BufferedImage img2) {
+        int width = img1.getWidth();
+        int height = img1.getHeight();
+
+        if (width != img2.getWidth() || height != img2.getHeight()) return false;
+
+        for (int i = 0; i < width; i++) {
+            for (int j = 0; j < height; j++) {
+                if (img1.getRGB(i, j) != img2.getRGB(i, j)) return false;
+            }
+        }
+        return true;
+    }
+
+    public static BufferedImage deepCopy(BufferedImage bi) {
+        ColorModel cm = bi.getColorModel();
+        boolean isAlphaPremultiplied = cm.isAlphaPremultiplied();
+        WritableRaster raster = bi.copyData(null);
+        return new BufferedImage(cm, raster, isAlphaPremultiplied, null);
+    }
+}
